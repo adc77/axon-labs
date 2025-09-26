@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>axon labs - confabulation detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* header */
+        header {
+            padding: 20px 0;
+            border-bottom: 1px solid #222;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+        
+        .nav-links a {
+            color: #e0e0e0;
+            text-decoration: none;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+        
+        .nav-links a:hover {
+            color: #ffffff;
+        }
+        
+        /* hero */
+        .hero {
+            padding: 180px 0 100px;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+        
+        .hero p {
+            font-size: 20px;
+            color: #888;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* sections */
+        section {
+            padding: 80px 0;
+            border-bottom: 1px solid #222;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        h2 {
+            font-size: 36px;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+        
+        h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+        
+        h4 {
+            font-size: 20px;
+            margin: 30px 0 15px;
+            color: #ffffff;
+        }
+        
+        p {
+            margin-bottom: 20px;
+            color: #ccc;
+        }
+        
+        /* demo section */
+        .demo-container {
+            background: #111;
+            border-radius: 12px;
+            padding: 40px;
+            margin-top: 40px;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ffffff;
+            font-weight: 500;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-size: 16px;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #ffffff;
+        }
+        
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        
+        .model-selects {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        button {
+            background: #ffffff;
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 255, 255, 0.3);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* .page-section {
+            padding-top: 130px;
+        }
+         */
+        /* results */
+        .results {
+            margin-top: 30px;
+            background: #0f0f0f;
+            border-radius: 8px;
+            padding: 30px;
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .confabulation-detected {
+            border: 2px solid #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+        
+        .confabulation-safe {
+            border: 2px solid #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .status-danger {
+            background: #ff4444;
+            color: #000;
+        }
+        
+        .status-safe {
+            background: #ffffff;
+            color: #000;
+        }
+        
+        .result-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #1a1a1a;
+            border-radius: 6px;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #333;
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* research page styles */
+        .research-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding-top: 130px;
+        }
+        
+        .article-section {
+            margin-bottom: 50px;
+            padding: 30px;
+            background: #111;
+            border-radius: 8px;
+        }
+        
+        .article-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .article-card {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 8px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .article-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
+        }
+        
+        .article-card h5 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+        
+        .article-card p {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 15px;
+        }
+        
+        .article-link {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .article-link:hover {
+            color: #ccc;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .result-card {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .result-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffffff;
+            display: block;
+        }
+        
+        .result-desc {
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        ul {
+            margin: 20px 0;
+            padding-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+        
+        /* contact */
+        .contact {
+            text-align: center;
+        }
+        
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .contact-card {
+            background: #111;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        
+        .email-link {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .email-link:hover {
+            color: #ccc;
+        }
+        
+        /* footer */
+        footer {
+            padding: 40px 0;
+            text-align: center;
+            color: #666;
+        }
+        
+        /* responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+            
+            .hero p {
+                font-size: 16px;
+            }
+            
+            .model-selects {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .article-links {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">axon labs</div>
+            <ul class="nav-links">
+                <li><a onclick="showPage('home')">about</a></li>
+                <li><a onclick="showPage('research')">research</a></li>
+                <li><a onclick="showPage('demo')">demo</a></li>
+                <li><a onclick="showPage('contact')">contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- home page -->
+        <div id="home" class="page active">
+            <section class="hero">
+                <div class="container">
+                    <h1>axon labs</h1>
+                    <p>experimenting with confabulation detection in large language models. building tools to catch when ai makes stuff up.</p>
+                </div>
+            </section>
+
+            <!-- demo video section -->
+            <section class="container">
+                <h2>see it in action</h2>
+                <div class="demo-container">
+                    <video id="demo-video-home" width="100%" height="auto" controls style="border-radius: 8px; margin-bottom: 20px;">
+                        <source src="axon_labs_demo.mp4" type="video/mp4">
+                        your browser does not support the video tag.
+                    </video>
+                    <div id="fallback-images-home" style="display: none; text-align: center;">
+                        <img src="example1.png" alt="demo example 1" style="max-width: 100%; height: auto; margin-bottom: 20px; border-radius: 8px;">
+                        <img src="example2.png" alt="demo example 2" style="max-width: 100%; height: auto; border-radius: 8px;">
+                    </div>
+                </div>
+            </section>
+
+            <section class="container">
+                <h2>what we do</h2>
+                <p>we detect when ai makes stuff up. when models generate confident but wrong information, trust breaks down.</p>
+                <p>we use entropy analysis and consistency checking to catch hallucinations. think bs detector for ai.</p>
+                <p>this is our lab. we experiment, break things, learn.</p>
+            </section>
+        </div>
+
+        <!-- research page -->
+        <div id="research" class="page">
+            <div class="research-page container">
+                <h2>research & findings</h2>
+                
+                <div class="article-section">
+                    <h3>confabulation detection experiment</h3>
+                    <p>we built an entropy-based system to catch when language models hallucinate. tested it on 12 different queries across legal, math, and factual domains. the results were pretty interesting.</p>
+                    
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <span class="result-number">83.3%</span>
+                            <span class="result-desc">confabulation rate</span>
+                        </div>
+                        <div class="result-card">
+                            <span class="result-number">100%</span>
+                            <span class="result-desc">detection accuracy</span>
+                        </div>
+                        <div class="result-card">
+                            <span class="result-number">85.7%</span>
+                            <span class="result-desc">legal domain errors</span>
+                        </div>
+                        <div class="result-card">
+                            <span class="result-number">0.0</span>
+                            <span class="result-desc">entropy score for hallucinations</span>
+                        </div>
+                    </div>
+
+                    <h4>what we found</h4>
+                    <p>the catch-cap-score system uses semantic entropy to measure response consistency. when models hallucinate, they're weirdly consistent about being wrong - they'll generate the same false information multiple times with zero variance.</p>
+                    
+                    <p>legal queries were the worst offenders. models would confidently cite completely made-up court cases with detailed explanations. even simple math problems like counting r's in "strawberry" got consistently wrong answers.</p>
+
+                    <h4>the tech</h4>
+                    <p>we generate multiple responses for the same query, compute semantic embeddings, and measure variability. high consistency + factual incorrectness = confabulation detected. the formula is simple:</p>
+                    <p><code>catch-cap-score = 1 - normalized_entropy</code></p>
+
+                    <p>perfect entropy correlation means we can automate this detection without external fact-checking databases. that's the breakthrough.</p>
+                </div>
+
+                <div class="article-section">
+                    <h3>related work</h3>
+                    <p>we've been exploring different approaches to make ai more reliable. here are some of our experiments:</p>
+                    
+                    <div class="article-links">
+                        <div class="article-card">
+                            <h5>context relevance classifier</h5>
+                            <p>built a llama 3.2 classifier to flag hallucinations in rag systems</p>
+                            <a href="https://medium.com/@aman.dogra/building-a-context-relevance-classifier-with-llama-3-2-to-flag-hallucinations-in-rag-systems-aa38aa2497b8" class="article-link" target="_blank">read on medium</a>
+                        </div>
+                        
+                        <div class="article-card">
+                            <h5>training llama to think better</h5>
+                            <p>grpo lora rl experiments to improve reasoning capabilities</p>
+                            <a href="https://medium.com/@aman.dogra/training-llama-3-2-3b-to-think-better-a-grpo-lora-rl-storytime-edd0014a7b3c" class="article-link" target="_blank">read on medium</a>
+                        </div>
+                        
+                        <div class="article-card">
+                            <h5>colqwenrag</h5>
+                            <p>efficient vision-based rag for legal ai with advanced retrieval</p>
+                            <a href="https://medium.com/@aman.dogra/colqwenrag-efficient-vision-based-rag-for-legal-ai-papers-advanced-retrieval-9538c7b69ae7" class="article-link" target="_blank">read on medium</a>
+                        </div>
+                        
+                        <div class="article-card">
+                            <h5>fine-tuning embeddings</h5>
+                            <p>improving retrieval in legal rag systems with custom embeddings</p>
+                            <a href="https://medium.com/@aman.dogra/fine-tuning-open-source-embedding-models-for-improving-retrieval-in-legal-rag-2b700d87a90e" class="article-link" target="_blank">read on medium</a>
+                        </div>
+                        
+                        <div class="article-card">
+                            <h5>custom reasoning models</h5>
+                            <p>building better reasoning with grpo and supervised fine-tuning</p>
+                            <a href="https://medium.com/@aman.dogra/building-custom-reasoning-models-with-grpo-and-supervised-fine-tuning-0e94717ba7d4" class="article-link" target="_blank">read on medium</a>
+                        </div>
+                        
+                        <div class="article-card">
+                            <h5>intelligent context management</h5>
+                            <p>system for managing context in large language model applications</p>
+                            <a href="https://open.substack.com/pub/axondendrite/p/intelligent-context-management-system?r=2p9a9l&utm_campaign=post&utm_medium=web" class="article-link" target="_blank">read on substack</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- demo page -->
+        <div id="demo" class="page">
+            <section class="container" style="padding-top: 120px;">
+                <h2>demo</h2>
+                <div class="demo-container">
+                    <video id="demo-video-demo" width="100%" height="auto" controls style="border-radius: 8px; margin-bottom: 30px;">
+                        <source src="axon_labs_demo.mp4" type="video/mp4">
+                        your browser does not support the video tag.
+                    </video>
+                    <div id="fallback-images-demo" style="display: none; text-align: center; margin-bottom: 30px;">
+                        <img src="example1.png" alt="demo example 1" style="max-width: 100%; height: auto; margin-bottom: 20px; border-radius: 8px;">
+                        <img src="example2.png" alt="demo example 2" style="max-width: 100%; height: auto; border-radius: 8px;">
+                    </div>
+                </div>
+                
+                
+                <h3>try it out</h3>
+                <p>ask any question. see if ai makes stuff up.</p>
+                
+                <div class="demo-container">
+                    <div class="input-group">
+                        <label for="query">your question</label>
+                        <textarea id="query" placeholder="ask anything... try questions about legal cases, historical facts, or math problems"></textarea>
+                    </div>
+                    
+                    <div class="model-selects">
+                        <div class="input-group">
+                            <label for="provider">provider</label>
+                            <select id="provider">
+                                <option value="openai">openai</option>
+                                <option value="gemini">gemini</option>
+                                <option value="groq">groq</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="model">model</label>
+                            <select id="model">
+                                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                                <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+                                <option value="gpt-4.1">gpt-4.1</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button id="submit-btn" onclick="detectConfabulation()">detect confabulation</button>
+                    
+                    <div id="results" class="results">
+                        <div id="status-badge" class="status-badge"></div>
+                        <div class="result-item">
+                            <div class="result-label">query</div>
+                            <div id="result-query"></div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">response</div>
+                            <div id="result-response"></div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">analysis</div>
+                            <div id="result-analysis"></div>
+                        </div>
+                        <div id="corrected-section" class="result-item" style="display: none;">
+                            <div class="result-label">corrected answer</div>
+                            <div id="result-corrected"></div>
+                        </div>
+                    </div>
+                </div>
+                
+            </section>
+        </div>
+
+        <!-- contact page -->
+        <div id="contact" class="page">
+            <section class="container contact" style="padding-top: 120px;">
+                <h2>get in touch</h2>
+                <p>open for collaborations and ideas.</p>
+                
+                <div class="contact-grid">
+                    <div class="contact-card">
+                        <h3>book a call</h3>
+                        <p>want to see more of what we're working on? let's chat.</p>
+                    </div>
+                    
+                    <div class="contact-card">
+                        <h3>collaborate</h3>
+                        <p>building something similar? let's chat about it.</p>
+                    </div>
+                    
+                    <div class="contact-card">
+                        <h3>ask anything</h3>
+                        <p>questions, feedback, or just want to talk about ai safety?</p>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 40px; padding: 30px; background: #111; border-radius: 8px;">
+                    <p style="margin-bottom: 15px;">
+                        <a href="mailto:amandogra2016@gmail.com" class="email-link">amandogra2016@gmail.com</a>
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <a href="https://x.com/an_axondendrite" class="email-link" target="_blank">@an_axondendrite</a>
+                    </p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 axon labs. experimenting with ai reliability.</p>
+        </div>
+    </footer>
+
+    <script>
+        const modelConfigs = {
+            openai: ['gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4.1'],
+            gemini: ['gemini-2.0-flash', 'gemini-2.5-flash-lite'],
+            groq: ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b']
+        };
+
+        function showPage(pageId) {
+            // hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // show selected page
+            document.getElementById(pageId).classList.add('active');
+            
+            // scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        // update model dropdown when provider changes
+        
+        document.getElementById('provider').addEventListener('change', function() {
+            const provider = this.value;
+            const modelSelect = document.getElementById('model');
+            
+            modelSelect.innerHTML = '';
+            modelConfigs[provider].forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                modelSelect.appendChild(option);
+            });
+        });
+
+        async function detectConfabulation() {
+            const query = document.getElementById('query').value.trim();
+            if (!query) {
+                alert('please enter a question');
+                return;
+            }
+
+            const provider = document.getElementById('provider').value;
+            const model = document.getElementById('model').value;
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const results = document.getElementById('results');
+            
+            // show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loading"><div class="spinner"></div> analyzing...</div>';
+            results.style.display = 'none';
+
+            // my_local_zrok : https://eeb7e0390641.ngrok-free.app
+
+            // wstf_system : https://786c8f3f836b.ngrok-free.app
+            // aws: http://axonlabs.ap-south-1.elasticbeanstalk.com
+            // render: https://catch-cap-demo.onrender.com
+
+            try {
+                const response = await fetch('https://catch-cap-demo.onrender.com/detect_confabulation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        generator: {
+                            provider: provider,
+                            model: model,
+                            temperature: 0.7
+                        },
+                        web_search: {
+                            provider: 'openai',
+                            model: 'gpt-4.1',
+                            temperature: 0.2
+                        },
+                        judge: {
+                            provider: 'openai',
+                            model: 'gpt-4.1',
+                            temperature: 0.3
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`http error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('error:', error);
+                alert('error connecting to api. make sure the backend is running');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'detect confabulation';
+            }
+        }
+
+        function displayResults(data) {
+            const results = document.getElementById('results');
+            const statusBadge = document.getElementById('status-badge');
+            const resultQuery = document.getElementById('result-query');
+            const resultResponse = document.getElementById('result-response');
+            const resultAnalysis = document.getElementById('result-analysis');
+            const correctedSection = document.getElementById('corrected-section');
+            const resultCorrected = document.getElementById('result-corrected');
+
+            // set status
+            if (data.confabulation_detected) {
+                results.className = 'results show confabulation-detected';
+                statusBadge.className = 'status-badge status-danger';
+                statusBadge.textContent = 'confabulation detected';
+            } else {
+                results.className = 'results show confabulation-safe';
+                statusBadge.className = 'status-badge status-safe';
+                statusBadge.textContent = 'response looks good';
+            }
+
+            // IMPORTANT: Show the results div by removing inline display style
+            results.style.display = 'block';
+
+            // populate results
+            resultQuery.textContent = data.query;
+            resultResponse.textContent = data.response;
+
+            // build analysis text with better formatting
+            let analysisText = '';
+            
+            if (data.entropy_score !== null && data.entropy_score !== undefined) {
+                const entropyScore = Math.abs(data.entropy_score) < 1e-10 ? '0.0' : data.entropy_score.toFixed(6);
+                analysisText += `entropy score: ${entropyScore}\n`;
+            }
+            
+            if (data.model_confident !== null && data.model_confident !== undefined) {
+                analysisText += `model confident: ${data.model_confident ? 'yes' : 'no'}\n`;
+            }
+            
+            if (data.flagged_token_ratio !== null && data.flagged_token_ratio !== undefined) {
+                analysisText += `flagged token ratio: ${(data.flagged_token_ratio * 100).toFixed(1)}%\n`;
+            }
+            
+            if (data.flagged_tokens !== null && data.flagged_tokens !== undefined) {
+                analysisText += `flagged tokens: ${data.flagged_tokens}\n`;
+            }
+            
+            if (data.judge_verdict) {
+                const verdict = data.judge_verdict.toLowerCase() === 'inconsistent' ? 'inconsistent with facts' : 'consistent with facts';
+                analysisText += `judge verdict: ${verdict}\n`;
+            }
+            
+            analysisText += `processing time: ${data.processing_time.toFixed(2)}s`;
+
+            resultAnalysis.textContent = analysisText;
+
+            // show corrected answer if available
+            if (data.corrected_answer && data.corrected_answer.trim()) {
+                correctedSection.style.display = 'block';
+                resultCorrected.textContent = data.corrected_answer;
+            } else {
+                correctedSection.style.display = 'none';
+            }
+            
+            // scroll to results
+            results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+
+        // video fallback functionality
+        function setupVideoFallback(videoId, fallbackId) {
+            const video = document.getElementById(videoId);
+            const fallback = document.getElementById(fallbackId);
+            
+            video.addEventListener('error', function() {
+                video.style.display = 'none';
+                fallback.style.display = 'block';
+            });
+            
+            video.addEventListener('loadstart', function() {
+                // check if video actually loads
+                setTimeout(() => {
+                    if (video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+                        video.style.display = 'none';
+                        fallback.style.display = 'block';
+                    }
+                }, 1000);
+            });
+        }
+
+        // initialize video fallbacks when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setupVideoFallback('demo-video-home', 'fallback-images-home');
+            setupVideoFallback('demo-video-demo', 'fallback-images-demo');
+        });
+    </script>
+</body>
+</html>
